@@ -107,7 +107,7 @@ const GetteamLocationNocontextRequestHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
             && handlerInput.requestEnvelope.request.intent.name === 'GetteamLocationNocontext'
-                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== null);
+                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== undefined);
     },
     async handle(handlerInput) {
         global.teamNumber = handlerInput.requestEnvelope.request.intent.slots.numberslot.value;
@@ -124,11 +124,37 @@ const GetteamLocationNocontextRequestHandler = {
         .getResponse();
     },
 };
+const GetteamLocationContextRequestHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'GetteamLocationContext';
+    },
+    async handle(handlerInput) {
+        if(global.teamNumber !== undefined){
+            const response = await httpGet();
+            console.log(response);
+            var city = response.city;
+            console.log(response.city);
+            var state_prov = response.state_prov;
+            console.log(response.state_prov);
+        } else {
+            return handlerInput.responseBuilder
+            .speak('Sorry, what team number would you like to know the location of?')
+            .reprompt('Sorry, what team number would you like to know the location of?')
+            .getResponse();
+        }
+        var speechText = 'Team ' + global.teamNumber + ' is from ' + city + ', ' + state_prov + '.';
+        return handlerInput.responseBuilder
+        .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .getResponse();
+    },
+};
 const GetteamRookieyearNocontextRequestHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
             && handlerInput.requestEnvelope.request.intent.name === 'GetteamRookieyearNocontext'
-                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== null);
+                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== undefined);
     },
     async handle(handlerInput) {
         global.teamNumber = handlerInput.requestEnvelope.request.intent.slots.numberslot.value;
@@ -136,7 +162,31 @@ const GetteamRookieyearNocontextRequestHandler = {
         console.log(response);
         var rookie_year = response.rookie_year;
         console.log(response.rookie_year);
-        var speechText = 'Team ' + global.teamNumber + 's rookie year was ' + rookie_year;
+        var speechText = 'Team ' + global.teamNumber + '\'s rookie year was ' + rookie_year + '.';
+        return handlerInput.responseBuilder
+        .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .getResponse();
+    },
+};
+const GetteamRookieyearContextRequestHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'GetteamRookieyearContext';
+    },
+    async handle(handlerInput) {
+        if(global.teamNumber !== undefined){
+            const response = await httpGet();
+            console.log(response);
+            var rookie_year = response.rookie_year;
+            console.log(response.rookie_year);
+        } else {
+            return handlerInput.responseBuilder
+            .speak('Sorry, what team number\'s rookie year would you like to know?')
+            .reprompt('Sorry, what team number\'s rookie year would you like to know?')
+            .getResponse();
+        }
+        var speechText = 'Team ' + global.teamNumber + '\'s rookie year was ' + rookie_year + '.';
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
         .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -147,7 +197,7 @@ const GetteamNextmatchNocontextRequestHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
             && handlerInput.requestEnvelope.request.intent.name === 'GetteamNextmatchNocontext'
-                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== null);
+                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== undefined);
     },
     async handle(handlerInput) {
         global.teamNumber = handlerInput.requestEnvelope.request.intent.slots.numberslot.value;
@@ -177,15 +227,60 @@ const GetteamNextmatchNocontextRequestHandler = {
         .getResponse();
     },
 };
+const GetteamNextmatchContextRequestHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'GetteamNextmatchContext';
+    },
+    async handle(handlerInput) {
+        if(global.teamNumber !== undefined){
+            var year = new Date().getFullYear();
+            console.log(year);
+            global.extras = '/events/' + year + '/keys';
+            const eventKeys = await httpGetExtras();
+            console.log(eventKeys);
+            for(var i = 0; i < eventKeys.length; i++) {
+                var nextMatch = eventKeys[i];
+                console.log(nextMatch);
+                const response = await httpGetExtras();
+                console.log(response.start_date);
+                var start_date = Date.parse(response.start_date);
+                if(Date.now() > start_date){
+                    console.log('already passed');
+                } else {
+                    const event = await httpGetEvents(nextMatch);
+                    var event_name = event.name;
+                    break;
+                }
+            }
+        } else {
+            return handlerInput.responseBuilder
+            .speak('Sorry, what team number\'s next match would you like to know?')
+            .reprompt('Sorry, what team number\'s next match would you like to know?')
+            .getResponse();
+        }
+        var speechText = 'Team ' + global.teamNumber + ' will be competing next at the ' + event_name + '.';
+        return handlerInput.responseBuilder
+        .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .getResponse();
+    },
+};
 const GetteamGenericNocontextRequestHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-            && handlerInput.requestEnvelope.request.intent.name === 'GetteamGenericNocontext'
-                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== null);
+            && handlerInput.requestEnvelope.request.intent.name === 'GetteamGenericNocontext';
     },
     handle(handlerInput) {
         global.teamNumber = handlerInput.requestEnvelope.request.intent.slots.numberslot.value;
-        const speechText = 'What would you like to know about team ' + global.teamNumber + '?';
+        if(global.teamNumber !== undefined){
+            const speechText = 'What would you like to know about team ' + global.teamNumber + '?';
+            return handlerInput.responseBuilder
+            .speak(speechText)
+            .reprompt(speechText)
+            .getResponse();
+        }
+        const speechText = 'Okay, what other team would you like to know about?'
         return handlerInput.responseBuilder
         .speak(speechText)
         .reprompt(speechText)
@@ -196,7 +291,7 @@ const GetteamStatusNocontextRequestHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
             && handlerInput.requestEnvelope.request.intent.name === 'GetteamStatusNocontext'
-                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== null);
+                && (handlerInput.requestEnvelope.request.intent.slots.numberslot.value !== null || global.teamNumber !== undefined);
     },
     async handle(handlerInput) {
         global.teamNumber = handlerInput.requestEnvelope.request.intent.slots.numberslot.value;
@@ -262,10 +357,96 @@ const GetteamStatusNocontextRequestHandler = {
             console.log('final: ' + overall_status_str);
             var speechText = overall_status_str;
             if(speechText.replace(' in the ' + event_name + '.', '') === ''){
-                speechText = 'Team ' + global.teamNumber + ' is not currently competing. '
+                speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
             }
         } else {
-            speechText = 'Team ' + global.teamNumber + ' is not currently competing. '
+            speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+        }
+        return handlerInput.responseBuilder
+        .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
+        .getResponse();
+    },
+};
+const GetteamStatusContextRequestHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'GetteamStatusContext';
+    },
+    async handle(handlerInput) {
+        if(global.teamNumber !== undefined){
+            var year = new Date().getFullYear();
+            console.log(year);
+            global.extras = '/events/keys';
+            var eventKeys = await httpGetExtras();
+            var eventsToSort = [];
+            for(var i = eventKeys.length-1; i >= 0; i--) {
+                var nextMatch = eventKeys[i];
+                if(nextMatch.startsWith(year)){
+                    console.log(nextMatch);
+                    const event = await httpGetEvents(nextMatch);
+                    var event_start = event.start_date;
+                    event_start = event_start.replace(/-/g, '');
+                    var event_name = event.name;
+                    if(nextMatch.includes(null) === false){
+                        var continueOn = 'true';
+                    } else {
+                        continueOn = 'false';
+                    }
+                    var eventToAdd = {EventDate : event_start, ID : nextMatch, ContinueOn : continueOn};
+                    eventsToSort.push(eventToAdd);
+                }
+            }
+            eventsToSort = eventsToSort.filter(ContinueOn => 'true');
+            console.log(JSON.stringify(eventsToSort));
+            if(eventsToSort.length > 0){
+                console.log('unsorted: ' + JSON.stringify(eventsToSort));
+                eventsToSort= eventsToSort.sort((a, b) => a.EventDate.localeCompare(b.EventDate));
+                console.log('sorted: ' + JSON.stringify(eventsToSort));
+                var nextEvent = eventsToSort[0].ID.toString();
+                console.log(eventsToSort[0].ID.toString());
+                const event = await httpGetEvents(nextEvent);
+                event_name = event.name;
+                global.extras = '/events/' + year + '/statuses';
+                const statuses = await httpGetExtras();
+                console.log(statuses);
+                var overall_status_str = JSON.stringify(statuses);
+                console.log(overall_status_str);
+                overall_status_str = overall_status_str.slice(overall_status_str.indexOf(nextEvent), overall_status_str.length);
+                overall_status_str = overall_status_str.slice(overall_status_str.indexOf(nextEvent), overall_status_str.indexOf(eventsToSort[1].ID.toString()))
+                console.log('sliced and diced: ' + overall_status_str);
+                overall_status_str = overall_status_str.substring(overall_status_str.indexOf('overall_status_str'), overall_status_str.indexOf('playoff":'));
+                console.log(overall_status_str);
+                console.log('first replace: ' + overall_status_str);
+                overall_status_str = overall_status_str.replace(/<b>/gi, '');
+                console.log('second replace: ' + overall_status_str);
+                overall_status_str = overall_status_str.replace(/<\/b>/gi, '');
+                console.log('third replace: ' + overall_status_str);
+                overall_status_str = overall_status_str.replace(/.", "playoff": {.*/gi, '.');
+                console.log('fourth replace: ' + overall_status_str);
+                overall_status_str = overall_status_str.replace(/overall_status_str/gi, '')
+                overall_status_str = overall_status_str.replace(/","/gi, '');
+                overall_status_str = overall_status_str.replace(/"/gi, '');
+                overall_status_str = overall_status_str.replace(/:/gi, '');
+                overall_status_str = overall_status_str.replace(/\//, ' out of ');
+                overall_status_str = overall_status_str.replace(/quals/, 'the qualifiers');
+                //overall_status_str = overall_status_str.replace(/_status_str/gi, '');
+                console.log('many replace later: ' + overall_status_str);
+                overall_status_str = overall_status_str.slice(0, -1);
+                overall_status_str = overall_status_str + ' in the ' + event_name + '.';
+                console.log('final: ' + overall_status_str);
+                var speechText = overall_status_str;
+                if(speechText.replace(' in the ' + event_name + '.', '') === ''){
+                    speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+                }
+            } else {
+                speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+            }
+        } else {
+            return handlerInput.responseBuilder
+            .speak('Sorry, what team number\'s status would you like to know?')
+            .reprompt('Sorry, what team number\'s status would you like to know?')
+            .getResponse();
         }
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -354,10 +535,14 @@ exports.handler = Alexa.SkillBuilders.custom()
         LaunchRequestHandler,
         FallbackIntentRequestHandler,
         GetteamLocationNocontextRequestHandler,
+        GetteamLocationContextRequestHandler,
         GetteamRookieyearNocontextRequestHandler,
+        GetteamRookieyearContextRequestHandler,
         GetteamNextmatchNocontextRequestHandler,
+        GetteamNextmatchContextRequestHandler,
         GetteamGenericNocontextRequestHandler,
         GetteamStatusNocontextRequestHandler,
+        GetteamStatusContextRequestHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         SessionEndedRequestHandler,
