@@ -206,21 +206,47 @@ const GetteamNextmatchNocontextRequestHandler = {
         global.extras = '/events/' + year + '/keys';
         const eventKeys = await httpGetExtras();
         console.log(eventKeys);
+        var eventsToSort = [];
         for(var i = 0; i < eventKeys.length; i++) {
             var nextMatch = eventKeys[i];
             console.log(nextMatch);
-            const response = await httpGetExtras();
-            console.log(response.start_date);
-            var start_date = Date.parse(response.start_date);
-            if(Date.now() > start_date){
-                console.log('already passed');
+            const event = await httpGetEvents(nextMatch);
+            var event_start = event.start_date;
+            event_start = event_start.replace(/-/g, '');
+            var event_name = event.name;
+            if(nextMatch.includes(null) === false){
+                var continueOn = 'true';
             } else {
-                const event = await httpGetEvents(nextMatch);
-                var event_name = event.name;
-                break;
+                continueOn = 'false';
+            }
+            var eventToAdd = {EventDate : event_start, ID : nextMatch, ContinueOn : continueOn};
+            eventsToSort.push(eventToAdd);
+        }
+        var z = 0;
+        eventsToSort = eventsToSort.filter(ContinueOn => 'true');
+        console.log(JSON.stringify(eventsToSort));
+        if(eventsToSort.length > 0){
+            console.log('unsorted: ' + JSON.stringify(eventsToSort));
+            eventsToSort= eventsToSort.sort((a, b) => b.EventDate.localeCompare(a.EventDate));
+            console.log('sorted: ' + JSON.stringify(eventsToSort));
+            for(var i = 0; i < eventsToSort.length; i++) {                console.log(eventsToSort[i].EventDate.toString());
+                var DateEvent = eventsToSort[i].EventDate.toString();
+                DateEvent = DateEvent.slice(0,4) + '-' + DateEvent.slice(4,6) + '-' + DateEvent.slice(6);
+                console.log(DateEvent);
+                if((Date.parse(DateEvent) - Date.now()) < 0){
+                    console.log('already passed');
+                    z++;
+                } else {
+                    const event = await httpGetEvents(nextMatch);
+                    var event_name = event.name;
+                    break;
+                }
             }
         }
         var speechText = 'Team ' + global.teamNumber + ' will be competing next at the ' + event_name + '.';
+        if(z === eventsToSort.length){
+            speechText = 'Team ' + global.teamNumber + ' has no more upcoming events they are registered to for this season.'
+        }
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
         .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -239,18 +265,42 @@ const GetteamNextmatchContextRequestHandler = {
             global.extras = '/events/' + year + '/keys';
             const eventKeys = await httpGetExtras();
             console.log(eventKeys);
+            var eventsToSort = [];
             for(var i = 0; i < eventKeys.length; i++) {
                 var nextMatch = eventKeys[i];
                 console.log(nextMatch);
-                const response = await httpGetExtras();
-                console.log(response.start_date);
-                var start_date = Date.parse(response.start_date);
-                if(Date.now() > start_date){
-                    console.log('already passed');
+                const event = await httpGetEvents(nextMatch);
+                var event_start = event.start_date;
+                event_start = event_start.replace(/-/g, '');
+                var event_name = event.name;
+                if(nextMatch.includes(null) === false){
+                    var continueOn = 'true';
                 } else {
-                    const event = await httpGetEvents(nextMatch);
-                    var event_name = event.name;
-                    break;
+                    continueOn = 'false';
+                }
+                var eventToAdd = {EventDate : event_start, ID : nextMatch, ContinueOn : continueOn};
+                eventsToSort.push(eventToAdd);
+            }
+            var z = 0;
+            eventsToSort = eventsToSort.filter(ContinueOn => 'true');
+            console.log(JSON.stringify(eventsToSort));
+            if(eventsToSort.length > 0){
+                console.log('unsorted: ' + JSON.stringify(eventsToSort));
+                eventsToSort= eventsToSort.sort((a, b) => b.EventDate.localeCompare(a.EventDate));
+                console.log('sorted: ' + JSON.stringify(eventsToSort));
+                for(var i = 0; i < eventsToSort.length; i++) {
+                    console.log(eventsToSort[i].EventDate.toString());
+                    var DateEvent = eventsToSort[i].EventDate.toString();
+                    DateEvent = DateEvent.slice(0,4) + '-' + DateEvent.slice(4,6) + '-' + DateEvent.slice(6);
+                    console.log(DateEvent);
+                    if((Date.parse(DateEvent) - Date.now()) < 0){
+                        console.log('already passed');
+                        z++;
+                    } else {
+                        const event = await httpGetEvents(nextMatch);
+                        var event_name = event.name;
+                        break;
+                    }
                 }
             }
         } else {
@@ -260,6 +310,9 @@ const GetteamNextmatchContextRequestHandler = {
             .getResponse();
         }
         var speechText = 'Team ' + global.teamNumber + ' will be competing next at the ' + event_name + '.';
+        if(z === eventsToSort.length){
+            speechText = 'Team ' + global.teamNumber + ' has no more upcoming events they are registered to for this season.'
+        }
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
         .reprompt('Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -321,7 +374,7 @@ const GetteamStatusNocontextRequestHandler = {
         console.log(JSON.stringify(eventsToSort));
         if(eventsToSort.length > 0){
             console.log('unsorted: ' + JSON.stringify(eventsToSort));
-            eventsToSort= eventsToSort.sort((a, b) => a.EventDate.localeCompare(b.EventDate));
+            eventsToSort= eventsToSort.sort((a, b) => b.EventDate.localeCompare(a.EventDate));
             console.log('sorted: ' + JSON.stringify(eventsToSort));
             var nextEvent = eventsToSort[0].ID.toString();
             console.log(eventsToSort[0].ID.toString());
@@ -344,23 +397,28 @@ const GetteamStatusNocontextRequestHandler = {
             console.log('third replace: ' + overall_status_str);
             overall_status_str = overall_status_str.replace(/.", "playoff": {.*/gi, '.');
             console.log('fourth replace: ' + overall_status_str);
-            overall_status_str = overall_status_str.replace(/overall_status_str/gi, '')
+            overall_status_str = overall_status_str.replace(/overall_status_str/gi, '');
             overall_status_str = overall_status_str.replace(/","/gi, '');
             overall_status_str = overall_status_str.replace(/"/gi, '');
             overall_status_str = overall_status_str.replace(/:/gi, '');
             overall_status_str = overall_status_str.replace(/\//, ' out of ');
             overall_status_str = overall_status_str.replace(/quals/, 'the qualifiers');
-            //overall_status_str = overall_status_str.replace(/_status_str/gi, '');
+            overall_status_str = overall_status_str.replace(/-/, ' wins ');
+            overall_status_str = overall_status_str.replace(/-/, ' losses and ');
             console.log('many replace later: ' + overall_status_str);
             overall_status_str = overall_status_str.slice(0, -1);
-            overall_status_str = overall_status_str + ' in the ' + event_name + '.';
+            if(overall_status_str.includes('qualifiers') !== true) {
+                overall_status_str = overall_status_str + ' ties at the ' + event_name + '.';
+            } else {
+                overall_status_str = overall_status_str.replace(' in the qualifiers ', ' ties in the qualifiers at the ') + event_name + '.';
+            }
             console.log('final: ' + overall_status_str);
             var speechText = overall_status_str;
-            if(speechText.replace(' in the ' + event_name + '.', '') === ''){
+            if(speechText.replace(' ties at the ' + event_name + '.', '') === '' || speechText.replace(' ties in the qualifiers at the ' + event_name + '.', '') === ''){
+                speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+            } else {
                 speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
             }
-        } else {
-            speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
         }
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -401,7 +459,7 @@ const GetteamStatusContextRequestHandler = {
             console.log(JSON.stringify(eventsToSort));
             if(eventsToSort.length > 0){
                 console.log('unsorted: ' + JSON.stringify(eventsToSort));
-                eventsToSort= eventsToSort.sort((a, b) => a.EventDate.localeCompare(b.EventDate));
+                eventsToSort= eventsToSort.sort((a, b) => b.EventDate.localeCompare(a.EventDate));
                 console.log('sorted: ' + JSON.stringify(eventsToSort));
                 var nextEvent = eventsToSort[0].ID.toString();
                 console.log(eventsToSort[0].ID.toString());
@@ -424,29 +482,34 @@ const GetteamStatusContextRequestHandler = {
                 console.log('third replace: ' + overall_status_str);
                 overall_status_str = overall_status_str.replace(/.", "playoff": {.*/gi, '.');
                 console.log('fourth replace: ' + overall_status_str);
-                overall_status_str = overall_status_str.replace(/overall_status_str/gi, '')
+                overall_status_str = overall_status_str.replace(/overall_status_str/gi, '');
                 overall_status_str = overall_status_str.replace(/","/gi, '');
                 overall_status_str = overall_status_str.replace(/"/gi, '');
                 overall_status_str = overall_status_str.replace(/:/gi, '');
                 overall_status_str = overall_status_str.replace(/\//, ' out of ');
                 overall_status_str = overall_status_str.replace(/quals/, 'the qualifiers');
-                //overall_status_str = overall_status_str.replace(/_status_str/gi, '');
+                overall_status_str = overall_status_str.replace(/-/, ' wins ');
+            overall_status_str = overall_status_str.replace(/-/, ' losses and ');
                 console.log('many replace later: ' + overall_status_str);
                 overall_status_str = overall_status_str.slice(0, -1);
-                overall_status_str = overall_status_str + ' in the ' + event_name + '.';
+                if(overall_status_str.includes('qualifiers') !== true) {
+                    overall_status_str = overall_status_str + ' ties at the ' + event_name + '.';
+                } else {
+                    overall_status_str = overall_status_str.replace(' in the qualifiers ', ' ties in the qualifiers at the ') + event_name + '.';
+                }
                 console.log('final: ' + overall_status_str);
                 var speechText = overall_status_str;
-                if(speechText.replace(' in the ' + event_name + '.', '') === ''){
+                if(speechText.replace(' ties at the ' + event_name + '.', '') === '' || speechText.replace(' ties in the qualifiers at the ' + event_name + '.', '') === ''){
+                    speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+                } else {
                     speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
                 }
             } else {
-                speechText = 'Team ' + global.teamNumber + ' is not currently competing.'
+                return handlerInput.responseBuilder
+                .speak('Sorry, what team number\'s status would you like to know?')
+                .reprompt('Sorry, what team number\'s status would you like to know?')
+                .getResponse();
             }
-        } else {
-            return handlerInput.responseBuilder
-            .speak('Sorry, what team number\'s status would you like to know?')
-            .reprompt('Sorry, what team number\'s status would you like to know?')
-            .getResponse();
         }
         return handlerInput.responseBuilder
         .speak(speechText + ' Would you like to know more about ' + global.teamNumber + ' or another team?')
@@ -466,7 +529,7 @@ const HelpIntentHandler = {
             .speak(speechText)
             .reprompt(speechText)
             .getResponse();
-    }
+    },
 };
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
@@ -478,7 +541,7 @@ const CancelAndStopIntentHandler = {
         const speechText = 'I hope I was able to help. See you next time!';
         return handlerInput.responseBuilder
             .speak(speechText);
-    }
+    },
 };
 const SessionEndedRequestHandler = {
     canHandle(handlerInput) {
@@ -487,7 +550,7 @@ const SessionEndedRequestHandler = {
     handle(handlerInput) {
         // Any cleanup logic goes here.
         return handlerInput.responseBuilder.getResponse();
-    }
+    },
 };
 
 // The intent reflector is used for interaction model testing and debugging.
@@ -506,7 +569,7 @@ const IntentReflectorHandler = {
             .speak(speechText)
             //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
             .getResponse();
-    }
+    },
 };
 
 // Generic error handling to capture any syntax or routing errors. If you receive an error
@@ -524,7 +587,7 @@ const ErrorHandler = {
             .speak(speechText)
             .reprompt(speechText)
             .getResponse();
-    }
+    },
 };
 
 // This handler acts as the entry point for your skill, routing all request and response
